@@ -11,6 +11,7 @@ from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
 from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm
 import os
+from dotenv import load_dotenv
 
 
 app = Flask(__name__)
@@ -27,21 +28,21 @@ login_manager.init_app(app)
 def load_user(user_id):
     return db.get_or_404(User, user_id)
 
+# Ensure you fetch the database URL from Heroku's environment variables
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
-# For adding profile images to the comment section
-gravatar = Gravatar(app,
-                    size=100,
-                    rating='g',
-                    default='retro',
-                    force_default=False,
-                    force_lower=False,
-                    use_ssl=False,
-                    base_url=None)
+# Fix for SQLAlchemy requiring 'postgresql://' instead of 'postgres://'
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-# CREATE DATABASE
+app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False  # Avoid unnecessary warnings
+
+# Define the Base class
 class Base(DeclarativeBase):
     pass
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DB_URI")
+
+# Initialize SQLAlchemy with model_class
 db = SQLAlchemy(model_class=Base)
 db.init_app(app)
 
